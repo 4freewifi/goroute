@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 // goroute is a very simple URL router based on named submatches of
 // regular expression that works well with http.Handler
 package goroute
@@ -34,7 +33,7 @@ type Handler interface {
 
 // RouteHandler stores patterns and matching handlers of a path.
 type RouteHandler struct {
-	path    string
+	path           string
 	patternHandler map[*regexp.Regexp]Handler
 }
 
@@ -105,7 +104,7 @@ func (wh *wrapHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // HandleFunc acts like like http.HandleFunc except one more argument
 // of handle func is required to get the parsed path parameters.
 func HandleFunc(path string, pattern string, handle func(
-	http.ResponseWriter, *http.Request, map[string]string)) (
+	http.ResponseWriter, *http.Request, map[string]string),) (
 	r *RouteHandler) {
 	handler := &wrapHandler{handle: handle}
 	r = Handle(path, pattern, handler)
@@ -115,7 +114,7 @@ func HandleFunc(path string, pattern string, handle func(
 // AddPatternHandlerFunc adds an additional pair of pattern and
 // handler function into RouteHandler.
 func (r *RouteHandler) AddPatternHandlerFunc(pattern string, handle func(
-	http.ResponseWriter, *http.Request, map[string]string)) {
+	http.ResponseWriter, *http.Request, map[string]string),) {
 	handler := &wrapHandler{handle: handle}
 	r.AddPatternHandler(pattern, handler)
 }
