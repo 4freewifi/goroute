@@ -20,7 +20,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-	"strings"
 )
 
 // Handler differs from http.Handler that it requires func
@@ -40,7 +39,7 @@ type RouteHandler struct {
 func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pathstr := req.URL.String()
 	log.Printf("URL: '%s'", pathstr)
-	pathstr = strings.TrimLeft(pathstr, r.path)
+	pathstr = pathstr[len(r.path):]
 	var match []string
 	var pattern *regexp.Regexp
 	var handler Handler
@@ -64,6 +63,7 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		kvpairs[name] = match[i]
 	}
+	log.Printf("Parsed path parameters: %s", kvpairs)
 	handler.SetPathParameters(kvpairs)
 	handler.ServeHTTP(w, req)
 }
