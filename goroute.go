@@ -47,7 +47,7 @@ func (route *routeHandler) parsePathParameters(url *url.URL) (
 	pathstr = strings.TrimLeft(pathstr, route.path)
 	match := route.pattern.FindStringSubmatch(pathstr)
 	if match == nil {
-		return nil, fmt.Errorf("Path %s does not match pattern %s",
+		return nil, fmt.Errorf("Path `%s' does not match pattern `%s'",
 			pathstr, route.pattern)
 	}
 	kvpairs = make(map[string]string)
@@ -65,6 +65,7 @@ func (route *routeHandler) parsePathParameters(url *url.URL) (
 func (route *routeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	kvpairs, err := route.parsePathParameters(r.URL)
 	if err != nil {
+		log.Println(err)
 		http.NotFound(w, r)
 		return
 	}
