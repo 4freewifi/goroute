@@ -20,10 +20,8 @@ package goroute
 import (
 	"log"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
-	"fmt"
 )
 
 // Handler differs from http.Handler that it requires func
@@ -34,55 +32,61 @@ type Handler interface {
 	SetPathParameters(map[string]string)
 }
 
-type routeHandler struct {
+// RouteHandler stores patterns and matching handlers of a path.
+type RouteHandler struct {
 	path    string
-	pattern *regexp.Regexp
-	handler Handler
+	patternHandler map[*regexp.Regexp]Handler
 }
 
-func (route *routeHandler) parsePathParameters(url *url.URL) (
-	kvpairs map[string]string, err error) {
-	pathstr := url.String()
+func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	pathstr := req.URL.String()
 	log.Printf("URL: '%s'", pathstr)
-	pathstr = strings.TrimLeft(pathstr, route.path)
-	match := route.pattern.FindStringSubmatch(pathstr)
-	if match == nil {
-		return nil, fmt.Errorf("Path `%s' does not match pattern `%s'",
-			pathstr, route.pattern)
+	pathstr = strings.TrimLeft(pathstr, r.path)
+	var match []string
+	var pattern *regexp.Regexp
+	var handler Handler
+	for pattern, handler = range r.patternHandler {
+		match = pattern.FindStringSubmatch(pathstr)
+		if match != nil {
+			break
+		}
 	}
-	kvpairs = make(map[string]string)
-	err = nil
-	for i, name := range route.pattern.SubexpNames() {
+	if match == nil {
+		log.Printf("Cannot find a matching pattern for Path `%s'",
+			pathstr)
+		http.NotFound(w, req)
+		return
+	}
+	kvpairs := make(map[string]string)
+	for i, name := range pattern.SubexpNames() {
 		// ignore full match and unnamed submatch
 		if i == 0 || name == "" {
 			continue
 		}
 		kvpairs[name] = match[i]
 	}
-	return
+	handler.SetPathParameters(kvpairs)
+	handler.ServeHTTP(w, req)
 }
 
-func (route *routeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	kvpairs, err := route.parsePathParameters(r.URL)
+// AddPatternHandler adds an additional pair of pattern and handler into
+// RouteHandler.
+func (r *RouteHandler) AddPatternHandler(pattern string, handler Handler) {
+	reg, err := regexp.Compile(pattern)
 	if err != nil {
-		log.Println(err)
-		http.NotFound(w, r)
-		return
+		panic(err)
 	}
-	route.handler.SetPathParameters(kvpairs)
-	route.handler.ServeHTTP(w, r)
+	r.patternHandler[reg] = handler
 }
 
 // Handle acts like http.Handle except pattern must be a regular
 // expression with named sub matches, while path acts just like the
 // `pattern` argument of http.Handle .
-func Handle(path string, pattern string, handler Handler) {
-	r, err := regexp.Compile(pattern)
-	if err != nil {
-		panic(err)
-	}
-	route := routeHandler{path, r, handler}
-	http.Handle(path, &route)
+func Handle(path string, pattern string, handler Handler) (r *RouteHandler) {
+	r = &RouteHandler{path, make(map[*regexp.Regexp]Handler)}
+	r.AddPatternHandler(pattern, handler)
+	http.Handle(path, r)
+	return
 }
 
 type wrapHandler struct {
@@ -101,7 +105,17 @@ func (wh *wrapHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // HandleFunc acts like like http.HandleFunc except one more argument
 // of handle func is required to get the parsed path parameters.
 func HandleFunc(path string, pattern string, handle func(
-	http.ResponseWriter, *http.Request, map[string]string),) {
-	handler := wrapHandler{handle, nil}
-	Handle(path, pattern, &handler)
+	http.ResponseWriter, *http.Request, map[string]string)) (
+	r *RouteHandler) {
+	handler := &wrapHandler{handle: handle}
+	r = Handle(path, pattern, handler)
+	return
+}
+
+// AddPatternHandlerFunc adds an additional pair of pattern and
+// handler function into RouteHandler.
+func (r *RouteHandler) AddPatternHandlerFunc(pattern string, handle func(
+	http.ResponseWriter, *http.Request, map[string]string)) {
+	handler := &wrapHandler{handle: handle}
+	r.AddPatternHandler(pattern, handler)
 }

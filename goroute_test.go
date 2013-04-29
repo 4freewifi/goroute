@@ -25,7 +25,14 @@ type MySrv struct {
 }
 
 func (m *MySrv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, %s!\n", m.kvpairs["userid"])
+	for k, v := range m.kvpairs {
+		switch k {
+		case "userid":
+			fmt.Fprintf(w, "Hello, %s!\n", v)
+		case "sitename":
+			fmt.Fprintf(w, "Welcome to %s!\n", v)
+		}
+	}
 }
 
 func (m *MySrv) SetPathParameters(kvpairs map[string]string) {
@@ -34,8 +41,10 @@ func (m *MySrv) SetPathParameters(kvpairs map[string]string) {
 
 func TestRouteHandler(t *testing.T) {
 	srv := MySrv{nil}
-	Handle("/", `users/(?P<userid>[^/]+)/?`, &srv)
+	r := Handle("/", `users/(?P<userid>[^/]+)/?`, &srv)
+	r.AddPatternHandler(`sites/(?P<sitename>[^/]+)/?`, &srv)
 	fmt.Println("Try visit http://localhost:8080/users/john")
+	fmt.Println("and http://localhost:8080/sites/Taipei")
 	err := http.ListenAndServe("localhost:8080", nil)
 	if err != nil {
 		panic(err)
