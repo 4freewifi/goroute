@@ -16,27 +16,26 @@ package goroute
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"testing"
 )
 
-type Foo struct {
+type MySrv struct {
 	kvpairs map[string]string
 }
 
-func (foo *Foo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, foo.kvpairs)
+func (m *MySrv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hello, %s!\n", m.kvpairs["userid"])
 }
 
-func (foo *Foo) SetPathParameters(kvpairs map[string]string) {
-	foo.kvpairs = kvpairs
+func (m *MySrv) SetPathParameters(kvpairs map[string]string) {
+	m.kvpairs = kvpairs
 }
 
 func TestRouteHandler(t *testing.T) {
-	foo := Foo{}
-	Handle("/", `(?P<p1>[^/]+)/(?P<p2>[^/]+)/?`, &foo)
-	log.Println("Try visit http://localhost:8080/hello/world/")
+	srv := MySrv{nil}
+	Handle("/", `users/(?P<userid>[^/]+)/?`, &srv)
+	fmt.Println("Try visit http://localhost:8080/users/john")
 	err := http.ListenAndServe("localhost:8080", nil)
 	if err != nil {
 		panic(err)
