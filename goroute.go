@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"fmt"
 )
 
 // Handler differs from http.Handler that it requires func
@@ -40,15 +41,17 @@ type routeHandler struct {
 }
 
 func (route *routeHandler) parsePathParameters(url *url.URL) (
-	kvpairs map[string]string) {
+	kvpairs map[string]string, err error) {
 	pathstr := url.String()
 	log.Printf("URL: '%s'", pathstr)
 	pathstr = strings.TrimLeft(pathstr, route.path)
-	kvpairs = make(map[string]string)
 	match := route.pattern.FindStringSubmatch(pathstr)
 	if match == nil {
-		return
+		return nil, fmt.Errorf("Path %s does not match pattern %s",
+			pathstr, route.pattern)
 	}
+	kvpairs = make(map[string]string)
+	err = nil
 	for i, name := range route.pattern.SubexpNames() {
 		// ignore full match and unnamed submatch
 		if i == 0 || name == "" {
@@ -60,7 +63,11 @@ func (route *routeHandler) parsePathParameters(url *url.URL) (
 }
 
 func (route *routeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	kvpairs := route.parsePathParameters(r.URL)
+	kvpairs, err := route.parsePathParameters(r.URL)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
 	route.handler.SetPathParameters(kvpairs)
 	route.handler.ServeHTTP(w, r)
 }
