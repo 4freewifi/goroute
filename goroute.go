@@ -22,7 +22,7 @@ import (
 	"regexp"
 )
 
-// Handler differs from http.Handler that it requires func
+// Handler differs from http.Handler in that it requires func
 // SetPathParameters, which is used to pass in path parameters parsed
 // from the named sub matches of path pattern.
 type Handler interface {
@@ -36,6 +36,8 @@ type RouteHandler struct {
 	patternHandler map[*regexp.Regexp]Handler
 }
 
+// ServeHTTP parses the path parameters, calls SetPathParameters of
+// the corresponding hander, then directs traffic to it.
 func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pathstr := req.URL.String()
 	log.Printf("URL: '%s'", pathstr)
