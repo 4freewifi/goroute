@@ -16,38 +16,54 @@ package goroute
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
-type MySrv struct {
+type MrFriendly struct {
 	kvpairs map[string]string
 }
 
-func (m *MySrv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (m *MrFriendly) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for k, v := range m.kvpairs {
 		switch k {
 		case "userid":
-			fmt.Fprintf(w, "Hello, %s!\n", v)
+			fmt.Fprintf(w, "Hello, %s!", v)
 		case "sitename":
-			fmt.Fprintf(w, "Welcome to %s!\n", v)
+			fmt.Fprintf(w, "Welcome to %s!", v)
 		}
 	}
 }
 
-func (m *MySrv) SetPathParameters(kvpairs map[string]string) {
+func (m *MrFriendly) SetPathParameters(kvpairs map[string]string) {
 	m.kvpairs = kvpairs
 }
 
-func TestRouteHandler(t *testing.T) {
-	srv := MySrv{nil}
-	r := Handle("/", `users/(?P<userid>[^/]+)/?`, &srv)
-	r.AddPatternHandler(`sites/(?P<sitename>[^/]+)/?`, &srv)
-	fmt.Println("Try visit http://localhost:8080/users/john")
-	fmt.Println("and http://localhost:8080/sites/Taipei")
-	err := http.ListenAndServe("localhost:8080", nil)
+func expect(t *testing.T, url string, expect string) {
+	resp, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		t.Error(err)
+		return
 	}
-	return
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	bodytext := string(body)
+	if bodytext != expect {
+		t.Errorf("Expect: `%s', got: `%s'", expect, bodytext)
+		return
+	}
+	log.Printf("Got expected response: `%s'", expect)
+}
+
+func TestRouteHandler(t *testing.T) {
+	mr := MrFriendly{nil}
+	r := Handle("/", `users/(?P<userid>[^/]+)/?`, &mr)
+	r.AddPatternHandler(`sites/(?P<sitename>[^/]+)/?`, &mr)
+	s := httptest.NewServer(r)
+	defer s.Close()
+	expect(t, s.URL+"/users/John", "Hello, John!")
+	expect(t, s.URL+"/sites/Taipei", "Welcome to Taipei!")
 }
