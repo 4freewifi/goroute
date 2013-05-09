@@ -40,7 +40,7 @@ type RouteHandler struct {
 // the corresponding hander, then directs traffic to it.
 func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pathstr := req.URL.String()
-	log.Printf("URL: '%s'", pathstr)
+	log.Printf("%s: '%s'", req.Method, pathstr)
 	pathstr = pathstr[len(r.path):]
 	var match []string
 	var pattern *regexp.Regexp
