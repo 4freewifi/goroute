@@ -113,3 +113,7 @@ Comparing to the original http.Handler, a new function
 key-value pairs parsed from the named submatches of the regular
 expression `users/(?P<userid>[^/]+)/?`. Besides that, `goroute.Handle`
 acts the same as `http.Handle`.
+
+## API
+
+Visit <http://godoc.org/github.com/johncylee/goroute>
