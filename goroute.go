@@ -17,6 +17,7 @@
 package goroute
 
 import (
+	"container/list"
 	"log"
 	"net/http"
 	"regexp"
@@ -30,10 +31,15 @@ type Handler interface {
 	SetPathParameters(map[string]string)
 }
 
+type patternHandler struct {
+	Regexp  *regexp.Regexp
+	Handler Handler
+}
+
 // RouteHandler stores patterns and matching handlers of a path.
 type RouteHandler struct {
-	path           string
-	patternHandler map[*regexp.Regexp]Handler
+	path            string
+	patternHandlers *list.List
 }
 
 // ServeHTTP parses the path parameters, calls SetPathParameters of
@@ -45,7 +51,10 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var match []string
 	var pattern *regexp.Regexp
 	var handler Handler
-	for pattern, handler = range r.patternHandler {
+	for e := r.patternHandlers.Front(); e != nil; e = e.Next() {
+		h := e.Value.(*patternHandler)
+		pattern = h.Regexp
+		handler = h.Handler
 		match = pattern.FindStringSubmatch(pathstr)
 		if match != nil {
 			break
@@ -71,20 +80,20 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 // AddPatternHandler adds an additional pair of pattern and handler into
-// RouteHandler.
+// RouteHandler. Last added will be matched first.
 func (r *RouteHandler) AddPatternHandler(pattern string, handler Handler) {
 	reg, err := regexp.Compile(pattern)
 	if err != nil {
 		panic(err)
 	}
-	r.patternHandler[reg] = handler
+	r.patternHandlers.PushFront(&patternHandler{reg, handler})
 }
 
 // Handle acts like http.Handle except pattern must be a regular
 // expression with named sub matches, while path acts just like the
 // `pattern` argument of http.Handle .
 func Handle(path string, pattern string, handler Handler) (r *RouteHandler) {
-	r = &RouteHandler{path, make(map[*regexp.Regexp]Handler)}
+	r = &RouteHandler{path, list.New()}
 	r.AddPatternHandler(pattern, handler)
 	http.Handle(path, r)
 	return
@@ -106,7 +115,7 @@ func (wh *wrapHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // HandleFunc acts like like http.HandleFunc except one more argument
 // of handle func is required to get the parsed path parameters.
 func HandleFunc(path string, pattern string, handle func(
-	http.ResponseWriter, *http.Request, map[string]string),) (
+	http.ResponseWriter, *http.Request, map[string]string)) (
 	r *RouteHandler) {
 	handler := &wrapHandler{handle: handle}
 	r = Handle(path, pattern, handler)
@@ -114,9 +123,10 @@ func HandleFunc(path string, pattern string, handle func(
 }
 
 // AddPatternHandlerFunc adds an additional pair of pattern and
-// handler function into RouteHandler.
+// handler function into RouteHandler. Last added will be matched
+// first.
 func (r *RouteHandler) AddPatternHandlerFunc(pattern string, handle func(
-	http.ResponseWriter, *http.Request, map[string]string),) {
+	http.ResponseWriter, *http.Request, map[string]string)) {
 	handler := &wrapHandler{handle: handle}
 	r.AddPatternHandler(pattern, handler)
 }
