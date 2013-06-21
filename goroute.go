@@ -130,3 +130,38 @@ func (r *RouteHandler) AddPatternHandlerFunc(pattern string, handle func(
 	handler := &wrapHandler{handle: handle}
 	r.AddPatternHandler(pattern, handler)
 }
+
+// ServeMux acts just like http.ServeMux except it accepts `pattern'
+// as an extra argument just like Handle and HandleFunc
+type ServeMux struct {
+	HTTPServeMux *http.ServeMux
+}
+
+func NewServeMux() *ServeMux {
+	return &ServeMux{http.NewServeMux()}
+}
+
+func (mux *ServeMux) Handle(path string, pattern string, handler Handler) (
+	r *RouteHandler) {
+	r = &RouteHandler{path, list.New()}
+	r.AddPatternHandler(pattern, handler)
+	mux.HTTPServeMux.Handle(path, r)
+	return
+}
+
+func (mux *ServeMux) HandleFunc(path string, pattern string, handle func(
+	http.ResponseWriter, *http.Request, map[string]string)) (
+	r *RouteHandler) {
+	handler := &wrapHandler{handle: handle}
+	r = mux.Handle(path, pattern, handler)
+	return
+}
+
+func (mux *ServeMux) Handler(r *http.Request) (h http.Handler, pattern string) {
+	h, pattern = mux.HTTPServeMux.Handler(r)
+	return
+}
+
+func (mux *ServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	mux.HTTPServeMux.ServeHTTP(w, r)
+}
