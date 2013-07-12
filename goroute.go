@@ -23,12 +23,11 @@ import (
 	"regexp"
 )
 
-// Handler differs from http.Handler in that it requires func
-// SetPathParameters, which is used to pass in path parameters parsed
-// from the named sub matches of path pattern.
+// Handler differs from http.Handler in that it requires an extra
+// argument to pass in path parameters parsed from the named sub
+// matches of path pattern.
 type Handler interface {
-	ServeHTTP(http.ResponseWriter, *http.Request)
-	SetPathParameters(map[string]string)
+	ServeHTTP(http.ResponseWriter, *http.Request, map[string]string)
 }
 
 type patternHandler struct {
@@ -75,8 +74,7 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		kvpairs[name] = match[i]
 	}
 	log.Printf("Parsed path parameters: %s", kvpairs)
-	handler.SetPathParameters(kvpairs)
-	handler.ServeHTTP(w, req)
+	handler.ServeHTTP(w, req, kvpairs)
 }
 
 // AddPatternHandler adds an additional pair of pattern and handler into
@@ -89,9 +87,10 @@ func (r *RouteHandler) AddPatternHandler(pattern string, handler Handler) {
 	r.patternHandlers.PushFront(&patternHandler{reg, handler})
 }
 
-// Handle acts like http.Handle except pattern must be a regular
-// expression with named sub matches, while path acts just like the
-// `pattern` argument of http.Handle .
+// Handle acts like http.Handle except it requires one more argument:
+// pattern. `pattern' must be a regular expression with named sub
+// matches, while path acts just like the `pattern' argument of
+// http.Handle .
 func Handle(path string, pattern string, handler Handler) (r *RouteHandler) {
 	r = &RouteHandler{path, list.New()}
 	r.AddPatternHandler(pattern, handler)
@@ -100,16 +99,12 @@ func Handle(path string, pattern string, handler Handler) (r *RouteHandler) {
 }
 
 type wrapHandler struct {
-	handle  func(http.ResponseWriter, *http.Request, map[string]string)
-	kvpairs map[string]string
+	handle func(http.ResponseWriter, *http.Request, map[string]string)
 }
 
-func (wh *wrapHandler) SetPathParameters(kvpairs map[string]string) {
-	wh.kvpairs = kvpairs
-}
-
-func (wh *wrapHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	wh.handle(w, r, wh.kvpairs)
+func (wh *wrapHandler) ServeHTTP(w http.ResponseWriter, r *http.Request,
+	kvpairs map[string]string) {
+	wh.handle(w, r, kvpairs)
 }
 
 // HandleFunc acts like like http.HandleFunc except one more argument

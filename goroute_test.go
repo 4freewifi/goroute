@@ -24,11 +24,11 @@ import (
 )
 
 type MrFriendly struct {
-	kvpairs map[string]string
 }
 
-func (m *MrFriendly) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	for k, v := range m.kvpairs {
+func (m *MrFriendly) ServeHTTP(w http.ResponseWriter, r *http.Request,
+	kvpairs map[string]string) {
+	for k, v := range kvpairs {
 		switch k {
 		case "userid":
 			fmt.Fprintf(w, "Hello, %s!", v)
@@ -36,10 +36,6 @@ func (m *MrFriendly) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Welcome to %s!", v)
 		}
 	}
-}
-
-func (m *MrFriendly) SetPathParameters(kvpairs map[string]string) {
-	m.kvpairs = kvpairs
 }
 
 func expect(t *testing.T, url string, expect string) {
@@ -59,7 +55,7 @@ func expect(t *testing.T, url string, expect string) {
 }
 
 func TestRouteHandler(t *testing.T) {
-	mr := MrFriendly{nil}
+	mr := MrFriendly{}
 	r := Handle("/", `users/(?P<userid>[^/]+)/?`, &mr)
 	r.AddPatternHandler(`sites/(?P<sitename>[^/]+)/?`, &mr)
 	s := httptest.NewServer(r)
