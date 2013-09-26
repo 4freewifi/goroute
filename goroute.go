@@ -44,9 +44,8 @@ type RouteHandler struct {
 // ServeHTTP parses the path parameters, calls SetPathParameters of
 // the corresponding hander, then directs traffic to it.
 func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	pathstr := req.URL.String()
-	log.Printf("%s: '%s'", req.Method, pathstr)
-	pathstr = pathstr[len(r.path):]
+	log.Printf("%s: '%s'", req.Method, req.URL.String())
+	pathstr := req.URL.Path[len(r.path):]
 	var match []string
 	var pattern *regexp.Regexp
 	var handler Handler
