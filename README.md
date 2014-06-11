@@ -85,7 +85,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"github.com/johncylee/goroute"
+	"github.com/4freewifi/goroute"
 )
 
 type MySrv struct {
@@ -116,4 +116,4 @@ acts the same as `http.Handle`.
 
 ## API
 
-Visit <http://godoc.org/github.com/johncylee/goroute>
+Visit <http://godoc.org/github.com/4freewifi/goroute>
