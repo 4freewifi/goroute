@@ -18,7 +18,7 @@ package goroute
 
 import (
 	"container/list"
-	"log"
+	"github.com/golang/glog"
 	"net/http"
 	"regexp"
 )
@@ -44,7 +44,7 @@ type RouteHandler struct {
 // ServeHTTP parses the path parameters, calls SetPathParameters of
 // the corresponding hander, then directs traffic to it.
 func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	log.Printf("%s: '%s'", req.Method, req.URL.String())
+	glog.Infof("%s: '%s'", req.Method, req.URL.String())
 	pathstr := req.URL.Path[len(r.path):]
 	var match []string
 	var pattern *regexp.Regexp
@@ -59,7 +59,7 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if match == nil {
-		log.Printf("Cannot find a matching pattern for Path `%s'",
+		glog.Warningf("Cannot find a matching pattern for Path `%s'",
 			pathstr)
 		http.NotFound(w, req)
 		return
@@ -72,7 +72,7 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		kvpairs[name] = match[i]
 	}
-	log.Printf("Parsed path parameters: %s", kvpairs)
+	glog.Infof("Parsed path parameters: %s", kvpairs)
 	handler.ServeHTTP(w, req, kvpairs)
 }
 
