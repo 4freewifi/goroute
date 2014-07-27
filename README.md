@@ -79,40 +79,13 @@ handy.
 
 ## Example
 
-```go
-package main
+Check `goroute_test.go`.
 
-import (
-	"fmt"
-	"net/http"
-	"github.com/4freewifi/goroute"
-)
-
-type MySrv struct {
-	kvpairs map[string]string
-}
-
-func (m *MySrv) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, %s!\n", m.kvpairs["userid"])
-}
-
-func (m *MySrv) SetPathParameters(kvpairs map[string]string) {
-	m.kvpairs = kvpairs
-}
-
-func main() {
-	srv := MySrv{nil}
-	goroute.Handle("/", `users/(?P<userid>[^/]+)/?`, &srv)
-	fmt.Println("try visit http://localhost:8080/users/john")
-	http.ListenAndServe("localhost:8080", nil)
-}
-```
-
-Comparing to the original http.Handler, a new function
-`SetPathParameters(map[string]string)` is required to pass in the
-key-value pairs parsed from the named submatches of the regular
-expression `users/(?P<userid>[^/]+)/?`. Besides that, `goroute.Handle`
-acts the same as `http.Handle`.
+Comparing to the original http.Handler, a new parameter `pattern` is
+required when you associate an Handler to a path . It should be a
+regular expression with named capturing group, and every named
+parentheses will be stored in the extra parameter `map[string]string`
+introduced in goroute.Handler interface.
 
 ## API
 
