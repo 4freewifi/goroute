@@ -72,7 +72,7 @@ func (r *RouteHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		kvpairs[name] = match[i]
 	}
-	glog.Infof("Parsed path parameters: %s", kvpairs)
+	glog.V(1).Infof("Parsed path parameters: %s", kvpairs)
 	handler.ServeHTTP(w, req, kvpairs)
 }
 
