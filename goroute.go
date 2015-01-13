@@ -18,9 +18,12 @@ package goroute
 
 import (
 	"container/list"
+	"fmt"
 	"github.com/golang/glog"
 	"net/http"
+	"reflect"
 	"regexp"
+	"strings"
 )
 
 // Handler differs from http.Handler in that it requires an extra
@@ -33,6 +36,19 @@ type Handler interface {
 type patternHandler struct {
 	Regexp  *regexp.Regexp
 	Handler Handler
+}
+
+func (p *patternHandler) String() string {
+	handler := reflect.TypeOf(p.Handler).String()
+	v := reflect.ValueOf(p.Handler).MethodByName("String")
+	if v.IsValid() {
+		handler = v.Call([]reflect.Value{})[0].Interface().(string)
+	}
+	return fmt.Sprintf(
+		"{Regexp: %s, Handler: %s}",
+		p.Regexp.String(),
+		handler,
+	)
 }
 
 // RouteHandler stores patterns and matching handlers of a path.
@@ -84,6 +100,19 @@ func (r *RouteHandler) AddPatternHandler(pattern string, handler Handler) {
 		panic(err)
 	}
 	r.patternHandlers.PushFront(&patternHandler{reg, handler})
+}
+
+func (r *RouteHandler) String() string {
+	l := r.patternHandlers
+	handlers := make([]string, 0, l.Len())
+	for e := l.Front(); e != nil; e = e.Next() {
+		handlers = append(handlers, e.Value.(*patternHandler).String())
+	}
+	return fmt.Sprintf(
+		"path: %s\nHandlers: \n%s",
+		r.path,
+		strings.Join(handlers, "\n"),
+	)
 }
 
 // Handle acts like http.Handle except it requires one more argument:
